@@ -19,28 +19,28 @@ IMAGE_WIDTH = 512
 IMAGE_CHANNEL = 3
 NUM_FRAMES = 25
 NUM_CLASSES = 60
-alpha = 4
+mean = 0
+std = 0
 
 
-def transform_video(std, mean, video):
-    transform =  ApplyTransformToKey(
+
+inputs =[]
+
+transform =  ApplyTransformToKey(
     key="video",
     transform=Compose(
         [
+            Lambda(lambda x: x.permute(1,0,2,3)),
             UniformTemporalSubsample(NUM_FRAMES),
-            Lambda(lambda x: x/255.0),
-            NormalizeVideo([mean for _ in range(3)] , [std for _ in range(3)]),
-            
+            Lambda(lambda x: x.permute(1,0,2,3)),
+            Lambda(lambda x: x/255.0), 
+            NormalizeVideo((mean,), (std,)),
             CenterCropVideo(512),
             
         ]
         
     ),
-    )
-    return (transform(video))
-
-inputs =[]
-
+)
 
 
 
@@ -53,7 +53,7 @@ def get_data_info(f):
         yield a
         
 
-thisdict = {}
+
 with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f: 
     for x in get_data_info(f):
         cls = x[0]
@@ -63,13 +63,13 @@ with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f:
         # video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
         video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
 
-        video_data["video"] = video_data["video"].unsqueeze(0).permute(0,2,1,3,4)
+        
+        video_data["video"] = Grayscale(num_output_channels=1)((video_data["video"]).permute(1,0,2,3))
 
         print(video_data["video"].shape)
-        video_data["video"] = Grayscale(num_output_channels=1)(video_data["video"].unsqueeze(0))
         std, mean = torch.std_mean(video_data["video"])
         print(std, mean)
-        video_data = transform_video(std, mean, video_data)
+        video_data = transform( video_data)
 
     # Move the inputs to the desired device
         # inputs.append(video_data["video"])
