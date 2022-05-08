@@ -35,7 +35,8 @@ transform =  ApplyTransformToKey(
             Lambda(lambda x: x.permute(1,0,2,3)),
             Lambda(lambda x: x/255.0), 
             NormalizeVideo((mean,), (std,)),
-            CenterCropVideo(512),
+            CenterCropVideo([720,800]),
+            Lambda(lambda x: print(x.shape)),
             
         ]
         
@@ -60,7 +61,6 @@ with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f:
         start_time = x[1]
         end_time = x[2]
         
-        # video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
         video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
 
         
@@ -72,7 +72,7 @@ with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f:
         video_data = transform( video_data)
 
     # Move the inputs to the desired device
-        # inputs.append(video_data["video"])
+        inputs.append(video_data["video"])
 
 
 # inputs = [i.to(device)[None, ...] for i in inputs]
