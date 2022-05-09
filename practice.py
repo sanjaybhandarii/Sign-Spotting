@@ -1,6 +1,11 @@
+import pickle
 
+with open('MSSL_TRAIN_SET_GT.pkl', 'rb') as f:
+    data = pickle.load(f)
 
-import torch
-x = torch.randn(1,2,2)
-print(x)
-print(x.permute(0,2,1))
+length = 0
+ 
+for x in data:
+    length += len(data[x])
+
+print(length)
