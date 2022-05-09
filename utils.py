@@ -1,14 +1,14 @@
 import torch
-import pytorchvideo
-import torch.utils.data
 from torchvision.transforms import Compose, Lambda, Grayscale
 from torchvision.transforms._transforms_video import CenterCropVideo, NormalizeVideo
 from pytorchvideo.data.encoded_video import EncodedVideo
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
     UniformTemporalSubsample,
-    UniformCropVideo
 )
+from torch.utils.data import DataLoader
+import numpy as np
+from dataset import *
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -24,19 +24,24 @@ std = 0
 
 
 
-inputs =[]
+inputs =[] #x
+classes = [] #y
 
 transform =  ApplyTransformToKey(
     key="video",
     transform=Compose(
         [
-            Lambda(lambda x: x.permute(1,0,2,3)),
+            
+            Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width) -> (channel, frames(depth), height, width)
+            
             UniformTemporalSubsample(NUM_FRAMES),
-            Lambda(lambda x: x.permute(1,0,2,3)),
+            Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width)
+            
             Lambda(lambda x: x/255.0), 
             NormalizeVideo((mean,), (std,)),
             CenterCropVideo([720,800]),
-            Lambda(lambda x: print(x.shape)),
+            Lambda(lambda x: x.permute(1,0,2,3)),#(channel, frames(depth), height, width)
+            
             
         ]
         
@@ -57,7 +62,7 @@ def get_data_info(f):
 
 with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f: 
     for x in get_data_info(f):
-        cls = x[0]
+        classes.append(x[0])
         start_time = x[1]
         end_time = x[2]
         
@@ -66,14 +71,20 @@ with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f:
         
         video_data["video"] = Grayscale(num_output_channels=1)((video_data["video"]).permute(1,0,2,3))
 
-        print(video_data["video"].shape)
+        #print(video_data["video"].shape)
         std, mean = torch.std_mean(video_data["video"])
-        print(std, mean)
+        #print(std, mean)
         video_data = transform( video_data)
 
     # Move the inputs to the desired device
         inputs.append(video_data["video"])
 
 
-# inputs = [i.to(device)[None, ...] for i in inputs]
-    
+ds = SignDataset(inputs, classes)
+print(len(ds))
+
+
+dataloader = DataLoader(ds, batch_size=4, shuffle=True, num_workers=1)
+x,y =((iter(dataloader).next()))
+print(x.shape)
+
