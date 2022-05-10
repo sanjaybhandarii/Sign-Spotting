@@ -1,5 +1,5 @@
 import torch
-from torchvision.transforms import Compose, Lambda, Grayscale
+from torchvision.transforms import Compose, Lambda, Grayscale, Normalize
 from torchvision.transforms._transforms_video import CenterCropVideo, NormalizeVideo
 from pytorchvideo.data.encoded_video import EncodedVideo
 from pytorchvideo.transforms import (
@@ -24,47 +24,59 @@ std = 0
 
 
 
+IMAGE_HEIGHT = 720
+IMAGE_WIDTH = 800
+IMAGE_CHANNEL = 1
+NUM_FRAMES = 25
+NUM_CLASSES = 60
+
+
+
 inputs =[] #x
 classes = [] #y
 
-transform =  ApplyTransformToKey(
-    key="video",
-    transform=Compose(
-        [
-            
-            Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width) -> (channel, frames(depth), height, width)
-            
-            UniformTemporalSubsample(NUM_FRAMES),
-            Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width)
-            
-            Lambda(lambda x: x/255.0), 
-            NormalizeVideo((mean,), (std,)),
-            CenterCropVideo([720,800]),
-            Lambda(lambda x: x.permute(1,0,2,3)),#(channel, frames(depth), height, width)
-            
-            
-        ]
-        
-    ),
-)
+def transform_data(x, mean, std):
+    
+    transform =  ApplyTransformToKey(
+        key="video",
+        transform=Compose(
+            [
+
+                Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width) -> (channel, frames(depth), height, width)
+
+                UniformTemporalSubsample(NUM_FRAMES),
+                Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width)
+                Lambda(lambda x: x/255.0),
+                
+                Normalize((mean,), (std,)),
+
+                CenterCropVideo([720,800]),
+                Lambda(lambda x: x.permute(1,0,2,3)),#(channel, frames(depth), height, width)
+
+            ]
+
+        ),
+    )
+    
+    return transform(x)
+
+
+
+    
+
 def get_data_info(f):
     for line in f:
         a = line.split(',')
         yield a
-
-
-
-
+        
 
 
 def load_dataloader(batch_size):
-    video = EncodedVideo.from_path("/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.mp4")
-        
-
-            
+    video = EncodedVideo.from_path("../input/signdataset/p01_n000.mp4")
+   
 
 
-    with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f: 
+    with open('../input/signdataset/p01_n000.txt') as f: 
         for x in get_data_info(f):
             classes.append(int(x[0]))
             start_time = x[1]
@@ -74,11 +86,16 @@ def load_dataloader(batch_size):
 
             
             video_data["video"] = Grayscale(num_output_channels=1)((video_data["video"]).permute(1,0,2,3))
-
+#             video_data["video"] = video_data["video"]/255
             #print(video_data["video"].shape)
+            
             std, mean = torch.std_mean(video_data["video"])
-            #print(std, mean)
-            video_data = transform( video_data)
+            std = std/255.0
+            mean = mean/255.0
+            print(std, mean)
+            
+            
+            video_data = transform_data( video_data, mean, std)
 
         # Move the inputs to the desired device
             inputs.append(video_data["video"])
