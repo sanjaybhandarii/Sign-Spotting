@@ -47,44 +47,45 @@ transform =  ApplyTransformToKey(
         
     ),
 )
-
-
-
-    # Initialize an EncodedVideo helper class
-video = EncodedVideo.from_path("/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.mp4")
-    
 def get_data_info(f):
     for line in f:
         a = line.split(',')
         yield a
+
+
+
+
+
+
+def load_dataloader(batch_size):
+    video = EncodedVideo.from_path("/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.mp4")
         
 
+            
 
-with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f: 
-    for x in get_data_info(f):
-        classes.append(x[0])
-        start_time = x[1]
-        end_time = x[2]
+
+    with open('/home/chaos/Documents/GitHub/Sign-Spotting/p01_n000.txt') as f: 
+        for x in get_data_info(f):
+            classes.append(int(x[0]))
+            start_time = x[1]
+            end_time = x[2]
+            
+            video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
+
+            
+            video_data["video"] = Grayscale(num_output_channels=1)((video_data["video"]).permute(1,0,2,3))
+
+            #print(video_data["video"].shape)
+            std, mean = torch.std_mean(video_data["video"])
+            #print(std, mean)
+            video_data = transform( video_data)
+
+        # Move the inputs to the desired device
+            inputs.append(video_data["video"])
+
+    signds = SignDataset(inputs, classes)
+    dataloader = DataLoader(signds, batch_size=batch_size, shuffle=True, num_workers=1)
+
+    return dataloader
         
-        video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
-
-        
-        video_data["video"] = Grayscale(num_output_channels=1)((video_data["video"]).permute(1,0,2,3))
-
-        #print(video_data["video"].shape)
-        std, mean = torch.std_mean(video_data["video"])
-        #print(std, mean)
-        video_data = transform( video_data)
-
-    # Move the inputs to the desired device
-        inputs.append(video_data["video"])
-
-
-ds = SignDataset(inputs, classes)
-print(len(ds))
-
-
-dataloader = DataLoader(ds, batch_size=4, shuffle=True, num_workers=1)
-x,y =((iter(dataloader).next()))
-print(x.shape)
 

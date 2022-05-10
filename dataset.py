@@ -13,9 +13,8 @@ import os
 class SignDataset(Dataset):
     def __init__(self,x,y):
         self.x = x
-        print("len x" , len(self.x))
         self.y = y
-        print("len y" , len(self.y))
+        
 
 
     def __len__(self):
