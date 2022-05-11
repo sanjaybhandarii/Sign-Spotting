@@ -63,42 +63,47 @@ def transform_data(x, mean, std):
 
 
     
-
-def get_data_info(f):
-    for line in f:
-        a = line.split(',')
-        yield a
         
 
 
 def load_dataloader(batch_size):
-    video = EncodedVideo.from_path("../input/signdataset/p01_n000.mp4")
-   
+    with open('path/MSSL_TRAIN_SET_GT.pkl', 'rb') as f:
+        data = pickle.load(f)
 
 
-    with open('../input/signdataset/p01_n000.txt') as f: 
-        for x in get_data_info(f):
-            classes.append(int(x[0]))
+
+    for key in data.keys():
+        filename = key
+        print("file",filename)
+
+    # file functions
+
+        for x in data[key]:
+            classes.append(x[0])
             start_time = x[1]
             end_time = x[2]
+   #give path
+        video = EncodedVideo.from_path("path/"+filename)
+    
             
-            video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
+            
+        video_data = video.get_clip(start_sec=float(start_time)/1000.0, end_sec=float(end_time)/1000.0)
 
             
-            video_data["video"] = Grayscale(num_output_channels=1)((video_data["video"]).permute(1,0,2,3))
+        video_data["video"] = Grayscale(num_output_channels=1)((video_data["video"]).permute(1,0,2,3))
 #             video_data["video"] = video_data["video"]/255
             #print(video_data["video"].shape)
             
-            std, mean = torch.std_mean(video_data["video"])
-            std = std/255.0
-            mean = mean/255.0
-            print(std, mean)
+        std, mean = torch.std_mean(video_data["video"])
+        std = std/255.0
+        mean = mean/255.0
+        print(std, mean)
             
             
-            video_data = transform_data( video_data, mean, std)
+        video_data = transform_data( video_data, mean, std)
 
         # Move the inputs to the desired device
-            inputs.append(video_data["video"])
+        inputs.append(video_data["video"])
 
     signds = SignDataset(inputs, classes)
     dataloader = DataLoader(signds, batch_size=batch_size, shuffle=True, num_workers=1)
