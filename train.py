@@ -57,7 +57,7 @@ def train(model, device, train_loader, optimizer, criterion, epoch):
             loss.backward()
             optimizer.step()
             
-            train_loss += loss.item()
+            train_loss += loss.item()* data.size(0)
             pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
             num_samples += pred.shape[0]
             print(num_samples)

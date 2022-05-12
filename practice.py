@@ -1,29 +1,9 @@
-import pickle
+import torch
+import torch.nn as nn
 
-classes = []
-
-with open('MSSL_TRAIN_SET_GT.pkl', 'rb') as f:
-    data = pickle.load(f)
-
+x = torch.randn(1, 3,5, 64, 64)
+x = torch.tensor(torch.unbind(x, dim=4))
 
 
-y = data['p01_n002']
-print(y[0])
-# for x in y[0]:
-#     print(x)
-
-for key in data.keys():
-    filename = key
-    print("file",filename)
-
-    # file functions
-
-    for x in data[key]:
-        classes.append(x[0])
-        start_time = x[1]
-        end_time = x[2]
-#         for y in x:
-#             print(y)
-            # classes.append(int(x[0]))
-            # start_time = x[1]
-            # end_time = x[2]
+y = nn.Conv2d(3, 64, kernel_size=5, padding=1)(x)
+print(y.shape)
