@@ -17,8 +17,9 @@ n_classes = 60
 
 model = nn.Sequential(OrderedDict([
     ('frontend', conv_3d()),
-    ('mid', conv_2d()),
-    ('fc', nn.Sequential( nn.Dropout(p=0.4), nn.Linear(135168, 8448), nn.Linear(8448, 1024), nn.Linear(1024,256), nn.Linear(256,60) ))
+    ('features', TimeDistributed(DenseNet3())),
+    ('backend', seq_net(input_size=5, hidden_size1=2)),
+    ('fc', nn.Sequential( nn.Dropout(p=0.5), nn.Linear(1512, 378), nn.Linear(378,60)))
 ]))
 
 
@@ -29,15 +30,22 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(
   [
         {"params": model.fc.parameters(), "lr": 1e-3},
-        {"params": model.mid.parameters(), "lr": 1e-5},
+        {"params": model.features.parameters(), "lr": 1e-5},
+        {"params": model.backend.parameters(), "lr": 1e-5},
         {"params": model.frontend.parameters(), "lr": 1e-4},
   ],
   momentum = 0.9
 )
+print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# state = torch.load("../input/sign-classification/model_optimizer.pt")
+# model.load_state_dict(state['model_state_dict'])
+model.half()
+# model.cuda()
 
+#optimizer.load_state_dict(state['optimizer_state_dict'])
 
 def train(model, device, train_loader, optimizer, criterion, epoch):
-    model.cuda()
     model.train()
     train_loss = 0
     correct = 0
