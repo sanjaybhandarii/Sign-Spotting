@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
 class conv_3d(nn.Module):
     def __init__(self):
         super(conv_3d, self).__init__()
@@ -99,7 +98,7 @@ class DenseBlock(nn.Module):
 
 class DenseNet3(nn.Module):
     def __init__(self, depth=10, num_classes=60, growth_rate=12,
-                 reduction=0.5, bottleneck=True, dropRate=0.5):
+                 reduction=0.5, bottleneck=True, dropRate=0.4):
         super(DenseNet3, self).__init__()
         in_planes = 2 * growth_rate
         n = (depth - 4) / 3
@@ -142,20 +141,21 @@ class DenseNet3(nn.Module):
                 m.bias.data.zero_()
     def forward(self, x):
         out = self.conv1(x)
-        print("dense1",out.shape)
+        
         out = self.trans1(self.block1(out))
-        print("dense1",out.shape)
+        
         out = self.trans2(self.block2(out))
-        print("dense1",out.shape)
+        
         out = self.block3(out)
-        print("dense1",out.shape)
+        
         out = self.relu(self.bn1(out))
-        print("dense1",out.shape)
-        out = F.avg_pool2d(out, 8)
-        print("dense1",out.shape)
-        out = out.view(-1, self.in_planes)
-        print("dense1",out.shape)
-        # return self.fc(out)
+        
+        out = F.avg_pool2d(out, 3)
+        
+        
+        return out
+        
+        
 
 
 def flatten(t):
@@ -170,19 +170,54 @@ class TimeDistributed(nn.Module):
         self.batch_first = batch_first
 
     def forward(self, x):
-
+        
         x = x.permute(0,1,3,4,2)# (batch, channels, height, width, frames)
         tList = [flatten(self.module(m)) for m in torch.unbind(x, dim=4) ]
         y = torch.stack(tList, dim=0)
         # We have to reshape Y
         if self.batch_first:
-            y = y.contiguous().view(x.size(0), -1, y.size(-1))  # (samples, timesteps, output_size)
+            y = y.contiguous().view(x.size(0), -1,y.size(-1))  # (samples, timesteps, output_size)
+            
         else:
             y = y.view(-1, x.size(0), y.size(-1))  # (timesteps, samples, output_size)
+            
         return y
+    
 
+class residual_conv1d(nn.Module):
+    def __init__(self,ni):
+        super(residual_conv1d, self).__init__()
+        self.conv1 = nn.Conv1d(ni, ni, 1)
+        self.conv2 = nn.Conv1d(ni, ni, 3, 1, 1)
 
+    def forward(self,x):
+        residual = x
+        out = F.relu(self.conv1(x))
+        out = F.relu(self.conv2(out))
+        out += residual
+        return out
+    
+class seq_net(nn.Module):
+    def __init__(self, input_size, hidden_size1):
+        super(seq_net, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size1
 
+        self.c1 = residual_conv1d(input_size)
+        self.p1 = nn.AvgPool2d(2)
+        self.c2 = residual_conv1d(hidden_size1)
+        self.p2 = nn.AvgPool2d(2)
+        
 
+    def forward(self, inputs):
+      
+        #print(inputs.shape)
 
-
+        # Run through Conv1d and Pool1d layers
+        c = self.c1(inputs)
+        p = self.p1(c)
+        c = self.c2(p)
+        p = self.p2(c)
+        out = F.relu(p)
+        out = out.view(1,-1)
+        return out
