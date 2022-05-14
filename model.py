@@ -9,6 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+
+
 class conv_3d(nn.Module):
     def __init__(self):
         super(conv_3d, self).__init__()
@@ -176,17 +178,17 @@ class TimeDistributed(nn.Module):
         y = torch.stack(tList, dim=0)
         # We have to reshape Y
         if self.batch_first:
-            y = y.contiguous().view(x.size(0), -1,y.size(-1))  # (samples, timesteps, output_size)
+            y = y.contiguous().view(x.size(0), -1,x.size(4))  # (samples, output-size, timesteps) for conv1d
             
         else:
-            y = y.view(-1, x.size(0), y.size(-1))  # (timesteps, samples, output_size)
+            y = y.view(x.size(4), x.size(0), -1)  # (timesteps, samples, output_size)
             
         return y
     
 
-class residual_conv1d(nn.Module):
+class block(nn.Module):
     def __init__(self,ni):
-        super(residual_conv1d, self).__init__()
+        super(block, self).__init__()
         self.conv1 = nn.Conv1d(ni, ni, 1)
         self.conv2 = nn.Conv1d(ni, ni, 3, 1, 1)
 
@@ -195,6 +197,7 @@ class residual_conv1d(nn.Module):
         out = F.relu(self.conv1(x))
         out = F.relu(self.conv2(out))
         out += residual
+        
         return out
     
 class seq_net(nn.Module):
@@ -203,10 +206,10 @@ class seq_net(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size1
 
-        self.c1 = residual_conv1d(input_size)
+        self.c1 = block(input_size)
         self.p1 = nn.AvgPool2d(2)
-        self.c2 = residual_conv1d(hidden_size1)
-        self.p2 = nn.AvgPool2d(2)
+        self.c2 = block(hidden_size1)
+        self.p2 = nn.AvgPool1d(2)
         
 
     def forward(self, inputs):
@@ -219,5 +222,26 @@ class seq_net(nn.Module):
         c = self.c2(p)
         p = self.p2(c)
         out = F.relu(p)
-        out = out.view(1,-1)
+        out = out.view(out.size(0),-1)
         return out
+
+
+
+
+# or we can use lstm at last
+
+
+
+#   class seq_net(nn.Module):
+#     def __init__(self, input_size, hidden_size):
+#         super(seq_net, self).__init__()
+#         self.hidden_size = hidden_size
+#         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
+
+#     def forward(self, x):
+#         #print(inputs.shape)
+#         # Run through LSTM layer
+#         out, _ = self.lstm(x)
+#         out = out[:,-1,:]
+#         out = out.view(x.size(0),-1)
+#         return out

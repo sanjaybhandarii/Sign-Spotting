@@ -18,9 +18,11 @@ n_classes = 60
 model = nn.Sequential(OrderedDict([
     ('frontend', conv_3d()),
     ('features', TimeDistributed(DenseNet3())),
-    ('backend', seq_net(input_size=5, hidden_size1=2)),
-    ('fc', nn.Sequential( nn.Dropout(p=0.5), nn.Linear(1512, 378), nn.Linear(378,60)))
+    ('backend', seq_net(input_size=6048, hidden_size1=3024)),
+    ('fc', nn.Sequential( nn.Dropout(p=0.5), nn.Linear(3024, 60)))
 ]))
+
+
 
 
 
