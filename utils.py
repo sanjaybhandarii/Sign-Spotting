@@ -28,13 +28,17 @@ std = 0
 IMAGE_HEIGHT = 720
 IMAGE_WIDTH = 800
 IMAGE_CHANNEL = 1
-NUM_FRAMES = 25
+NUM_FRAMES = 41
 NUM_CLASSES = 60
 
 
 
 inputs =[] #x
 classes = [] #y
+
+def pad_constant(tensor, length, value):
+    return torch.cat([tensor, tensor.new_zeros(length - tensor.size(0), *tensor.size()[1:])], dim=0)
+
 
 def transform_data(x, mean, std):
     
@@ -43,10 +47,11 @@ def transform_data(x, mean, std):
         transform=Compose(
             [
 
-                Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width) -> (channel, frames(depth), height, width)
+                # Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width) -> (channel, frames(depth), height, width)
 
-                UniformTemporalSubsample(NUM_FRAMES),
-                Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width)
+                # UniformTemporalSubsample(NUM_FRAMES),
+                # Lambda(lambda x: x.permute(1,0,2,3)),#(frames(depth), channel, height, width)
+                Lambda(lambda x: pad_constant(x, NUM_FRAMES, 0)),
                 Lambda(lambda x: x/255.0),
                 
                 Normalize((mean,), (std,)),
