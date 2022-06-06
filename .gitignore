@@ -153,3 +153,4 @@ cython_debug/
 *.txt
 *.mp4
 model/model_optimizer.pt
+*.pt
