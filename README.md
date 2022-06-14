@@ -12,3 +12,4 @@ and some others..
 
 
 ->We have used PytorchVideo for processing video datasets.
+->Dataset provided by the organizers uploaded at https://www.kaggle.com/datasets/gamingnation/signdataset for our use seems too much imbalanced so we prefer to use Class-Balanced Loss[1]
